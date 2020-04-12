@@ -1,0 +1,125 @@
+CREATE TABLE specialtys
+(
+  specialty_id numeric(10) not null,
+  specialty_name varchar2(50) not null unique,
+  CONSTRAINT specialtys_pk PRIMARY KEY (specialty_id)
+);
+
+CREATE TABLE studyplans
+(
+    plan_id numeric(10) not null,
+    specialty_id numeric(10) not null,
+    semester numeric(10) not null,
+    object_name varchar2(50) not null,
+    report_type varchar2(50) not null,
+    CONSTRAINT  studyplans_pk  PRIMARY KEY (plan_id),
+    CONSTRAINT studyplans_fk FOREIGN KEY (specialty_id)  REFERENCES specialtys (specialty_id)   
+);
+
+
+CREATE TABLE students
+(
+    student_id numeric(10) not null,
+    student_firstname varchar2(50) not null,
+    student_lastname varchar2(50) not null,
+    specialty_id numeric(10) not null,
+    dateofreceipt date not null,
+    CONSTRAINT students_pk PRIMARY KEY (student_id),
+    CONSTRAINT students_fk FOREIGN KEY (specialty_id)  REFERENCES specialtys (specialty_id)
+);
+
+CREATE TABLE estimations
+(
+    estimation_id numeric(10) not null,
+    student_id numeric(10) not null,
+    estimation_date date,
+    estimation numeric(10),
+    CONSTRAINT estimations_pk PRIMARY KEY (estimation_id),
+    CONSTRAINT estimations_fk FOREIGN KEY (student_id)  REFERENCES students (student_id)
+)
+
+
+create sequence specialty_seq
+  minvalue 1
+  maxvalue 1000000000000
+  increment by 1
+  nocache noorder nocycle
+;
+
+create trigger specialties_trigger_set_id
+  before insert on specialtys
+  for each row
+begin
+  if :new.specialty_id is null then
+    select specialty_seq.nextval
+      into :new.specialty_id 
+      from dual;
+  end if;
+end;
+
+alter trigger specialties_tr_set_id enable;
+
+create sequence studyplan_seq
+  minvalue 1
+  maxvalue 1000000000000
+  increment by 1
+  nocache noorder nocycle
+;
+
+create trigger studyplans_trigger_set_id
+  before insert on studyplans
+  for each row
+begin
+  if :new.plan_id is null then
+    select plan_seq.nextval
+      into :new.plan_id 
+      from dual;
+  end if;
+end;
+
+alter trigger  studyplans_trigger_set_id enable;
+
+
+create sequence students_seq
+  minvalue 1
+  maxvalue 1000000000000
+  increment by 1
+  nocache noorder nocycle
+;
+
+create trigger students_trigger_set_id
+  before insert on students
+  for each row
+begin
+  if :new.student_id is null then
+    select students_seq.nextval
+      into :new.student_id 
+      from dual;
+  end if;
+end;
+
+alter trigger  students_trigger_set_id enable;
+
+
+create sequence estimations_seq
+  minvalue 1
+  maxvalue 1000000000000
+  increment by 1
+  nocache noorder nocycle
+;
+
+create trigger estimations_trigger_set_id
+  before insert on estimations
+  for each row
+begin
+  if :new.estimation_id is null then
+    select estimations_seq.nextval
+      into :new.estimation_id 
+      from dual;
+  end if;
+end;
+
+alter trigger  estimations_trigger_set_id enable;
+
+
+
