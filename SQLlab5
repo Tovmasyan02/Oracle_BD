@@ -1,4 +1,4 @@
-CREATE TABLE specialtys
+СREATE TABLE specialtys
 (
   specialty_id numeric(10) not null,
   specialty_name varchar2(50) not null unique,
@@ -13,7 +13,8 @@ CREATE TABLE studyplans
     object_name varchar2(50) not null,
     report_type varchar2(50) not null,
     CONSTRAINT  studyplans_pk  PRIMARY KEY (plan_id),
-    CONSTRAINT studyplans_fk FOREIGN KEY (specialty_id)  REFERENCES specialtys (specialty_id)   
+    CONSTRAINT studyplans_fk FOREIGN KEY (specialty_id)  REFERENCES specialtys (specialty_id),
+	CONSTRAINT check_studyplans_report_type CHECK (report_type in ('Z', 'O', 'Z_WITH_O'))
 );
 
 
@@ -23,7 +24,7 @@ CREATE TABLE students
     student_firstname varchar2(50) not null,
     student_lastname varchar2(50) not null,
     specialty_id numeric(10) not null,
-    dateofreceipt date not null,
+    yearofreceipt number(10) not null,
     CONSTRAINT students_pk PRIMARY KEY (student_id),
     CONSTRAINT students_fk FOREIGN KEY (specialty_id)  REFERENCES specialtys (specialty_id)
 );
@@ -32,12 +33,13 @@ CREATE TABLE estimations
 (
     estimation_id numeric(10) not null,
     student_id numeric(10) not null,
+	plan_id numceric(10) not null,
     estimation_date date,
     estimation numeric(10),
     CONSTRAINT estimations_pk PRIMARY KEY (estimation_id),
     CONSTRAINT estimations_fk FOREIGN KEY (student_id)  REFERENCES students (student_id)
+	CONSTRAINT estimations_fk2 FOREIGN KEY (plan_id) REFERENCES studyplans(plan_id)
 )
-
 
 create sequence specialty_seq
   minvalue 1
@@ -120,6 +122,129 @@ begin
 end;
 
 alter trigger  estimations_trigger_set_id enable;
+
+
+//////////////////////////insert//////////////
+
+
+
+insert all
+  into specialtys (specialty_name) values ('piit')
+  into specialtys (specialty_name) values ('is')
+  select * from dual
+  
+  
+insert all
+   into studyplans (specialty_id,semester,object_name,report_type) values (1,'Oracle','Z')
+   into studyplans (specialty_id,semester,object_name,report_type) values (2,'Java','O')
+  select * from dual
+  
+ 
+ insert all
+  into students (student_firstname,student_lastname,specialty_id,yearofreceipt) values ('Armen','Tovmasyan',1,2017)
+  into students (student_firstname,student_lastname,specialty_id,yearofreceipt) values ('Ivan','Ivanov',2,2015)
+  into students (student_firstname,student_lastname,specialty_id,yearofreceipt) values ('Dmitriy','Evdokimov',1,2016)
+  into students (student_firstname,student_lastname,specialty_id,yearofreceipt) values ('Anton','Morozov',2,2018)
+  select * from dual
+  
+ insert all
+  into estimations (student_id,plan_id,estimation_date,estimation) values (1,1,date'2018-08-11',5)
+  into estimations (student_id,plan_id,estimation_date,estimation) values (2,2,date'2020-02-14',3)
+  into estimations (student_id,plan_id,estimation_date,estimation) values (3,1,date'2018-08-11',4)
+  into estimations (student_id,plan_id,estimation_date,estimation) values (4,2,date'2019-02-14',null)
+  select * from dual
+  
+  
+  
+  
+// Function 
+
+create or replace function fn_semester_count (
+  p_student_id in students.student_id%type
+) return number
+is
+  v_semestrs number;
+  v_yearofreceipt students.yearofreceipt%type;
+  v_years number;
+  v_month number;
+begin
+  select s.yearofreceipt
+    into v_yearofreceipt
+    from students s
+    where s.student_id = p_student_id;
+  v_years := extract(year from sysdate) - v_yearofreceipt;
+  v_month := extract(month from sysdate);
+  v_semestrs := v_years * 2;
+  if (v_month < 2) then
+    v_semestrs := v_semestrs - 1;
+  end if;
+  if (v_month >= 9) then 
+    v_semestrs := v_semestrs + 1;
+  end if;
+  return v_semestrs;
+end;
+
+
+  
+  
+/*ФИО студента, курс, код предмета, название предмета, семестр, оценка (2 – если сдавал экзамен, нулл – если не сдавал).*/
+
+/*ФИО студента, курс, код предмета, название предмета, семестр, оценка (2 – если сдавал экзамен, нулл – если не сдавал).*/
+
+select
+    s.student_id,
+    s.student_firstname,
+    s.student_lastname,
+    round(fn_semester_count(s.student_id)/2) as course,
+    spec.specialty_id,
+    sp.plan_id,
+    e.estimation
+    from 
+    students s
+    left join specialtys spec
+    on s.specialty_id=spec.specialty_id
+    left join studyplans sp
+    on sp.specialty_id=spec.specialty_id
+    left join estimations e
+    on e.plan_id=sp.plan_id
+    
+
+create or replace view student_tails_view as
+	select
+			s.student_id,
+			s.student_firstname,
+			s.student_lastname,
+			round(fn_semester_count(s.student_id)/2) as course,
+			spec.specialty_id,
+			sp.plan_id,
+			e.estimation
+		from 
+			students s
+			inner join specialtys spec
+			 on s.specialty_id=spec.specialty_id
+			inner join studyplans sp
+				on  sp.specialty_id=spec.specialty_id  and
+					sp.semester<fn_semester_count(s.student_id)
+			left join estimations e
+				on  s.student_id=e.student_id and 
+					e.plan_id=sp.plan_id
+		where nvl(e.estimation, 2) = 2
+		
+		
+select  stud.student_id,
+        stud.student_firstname,
+        stud.student_lastname,
+        count(stud.student_id) as t_count
+  from  student_tails_view stud
+  group by   stud.student_id,
+             stud.student_firstname,
+             stud.student_lastname
+  having count(stud.student_id) >=4
+;
+		
+		
+
+        
 
 
 
